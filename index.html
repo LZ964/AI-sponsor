@@ -13,14 +13,12 @@
             font-family: 'Inter', system-ui, sans-serif;
             overflow-x: hidden;
         }
-
         .neon-border {
             position: relative;
             background: #16213e;
             border-radius: 15px;
             box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
         }
-
         .neon-border::before {
             content: '';
             position: absolute;
@@ -31,43 +29,26 @@
             opacity: 0.5;
             animation: pulse 3s infinite alternate;
         }
-
         @keyframes pulse {
             0% { opacity: 0.3; filter: blur(2px); }
             100% { opacity: 0.7; filter: blur(5px); }
         }
-
         .ai-message {
             background: rgba(0, 102, 255, 0.1);
             border-left: 3px solid #00f2ff;
             border-radius: 0 12px 12px 0;
             backdrop-filter: blur(10px);
         }
-
         .user-message {
             background: rgba(255, 255, 255, 0.05);
             border-right: 3px solid #7000ff;
             border-radius: 12px 0 0 12px;
         }
-
-        .typing-indicator span {
-            width: 8px; height: 8px; background: #00f2ff;
-            display: inline-block; border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out;
-        }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1.0); }
-        }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #00f2ff; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-
-    <!-- Header -->
     <header class="p-6 text-center border-b border-gray-800">
         <h1 class="text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
             AI-SPONSOR PRO <span class="text-xs align-top text-cyan-500">v2.5</span>
@@ -75,21 +56,17 @@
         <p class="text-gray-500 text-sm mt-2 font-mono uppercase tracking-tighter">Système de Soutien Virtuel Autonome</p>
     </header>
 
-    <!-- Chat Container -->
     <main class="flex-grow container mx-auto max-w-3xl p-4 flex flex-col overflow-hidden">
         <div id="chat-window" class="flex-grow overflow-y-auto mb-4 space-y-4 p-4 neon-border">
             <div class="ai-message p-4 max-w-[85%]">
                 <p class="text-cyan-400 font-mono text-xs mb-1">SYSTEM_INIT:</p>
-                Bonjour Carl. Je suis prêt pour cette journée. Un jour à la fois. Comment te sens-tu dans ce moment présent ?
+                Bonjour Carl. Je suis prêt pour cette journée. Un jour à la fois. Comment te sens-tu ?
             </div>
         </div>
 
-        <!-- Input Area -->
         <div class="relative group">
             <div class="flex gap-2 p-2 bg-black/40 rounded-full border border-gray-700 focus-within:border-cyan-500 transition-all">
-                <input type="text" id="user-input" 
-                       class="flex-grow bg-transparent border-none focus:ring-0 text-white px-4 placeholder-gray-600" 
-                       placeholder="Entrez votre message...">
+                <input type="text" id="user-input" class="flex-grow bg-transparent border-none focus:ring-0 text-white px-4" placeholder="Entrez votre message...">
                 <button onclick="sendMessage()" class="bg-cyan-600 hover:bg-cyan-400 text-black font-bold p-3 rounded-full transition-all">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -97,7 +74,6 @@
         </div>
     </main>
 
-    <!-- Actions -->
     <footer class="p-4 flex justify-center gap-4 text-xs font-mono">
         <button onclick="clearChat()" class="text-gray-500 hover:text-red-400 transition-colors uppercase">Réinitialiser Log</button>
         <button onclick="downloadProject()" class="text-gray-500 hover:text-cyan-400 transition-colors uppercase">Exporter Système</button>
@@ -105,7 +81,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
-        const apiKey = "AIzaSyBPd7ORtzCO2662BFBAntDR2gnYJSW54yQ"; // Ta clé
+        const apiKey = "AIzaSyBPd7ORtzCO2662BFBAntDR2gnYJSW54yQ";
 
         async function sendMessage() {
             const input = document.getElementById('user-input');
@@ -115,20 +91,18 @@
             const userText = input.value;
             input.value = '';
 
-            // Affichage utilisateur
             chatWindow.innerHTML += `<div class="user-message p-4 ml-auto max-w-[85%]">
                 <p class="text-purple-400 font-mono text-xs mb-1 text-right">USER_INPUT:</p>
                 ${userText}
             </div>`;
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
-            // Appel API Gemini
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: `Agis en tant que parrain virtuel de rétablissement. Tu es empathique, calme et tu utilises les principes des 12 étapes. Réponds à : ${userText}` }] }]
+                        contents: [{ parts: [{ text: "Agis en tant que parrain virtuel de rétablissement (12 étapes). " + userText }] }]
                     })
                 });
                 
@@ -140,14 +114,12 @@
                     ${aiText}
                 </div>`;
             } catch (error) {
-                console.error("Erreur API:", error);
+                chatWindow.innerHTML += `<div class="p-4 text-red-500 text-xs font-mono">ERROR: CONNECTION_FAILED</div>`;
             }
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        function clearChat() {
-            document.getElementById('chat-window').innerHTML = '';
-        }
+        function clearChat() { document.getElementById('chat-window').innerHTML = ''; }
 
         function downloadProject() {
             const zip = new JSZip();
