@@ -3,106 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Sponsor - Voix & Texte</title>
+    <title>AI Sponsor - 12 Steps Program</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; display: flex; justify-content: center; padding: 20px; }
-        .app { width: 100%; max-width: 500px; background: white; border-radius: 20px; shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 90vh; }
-        .header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; }
-        .msg { margin-bottom: 15px; padding: 12px; border-radius: 10px; max-width: 80%; }
-        .user { background: #3498db; color: white; align-self: flex-end; margin-left: auto; }
-        .ai { background: #ecf0f1; color: #2c3e50; }
-        .controls { padding: 20px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 10px; }
-        .btn-row { display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-        button { border: none; cursor: pointer; border-radius: 25px; transition: 0.3s; }
-        .btn-send { background: #27ae60; color: white; padding: 0 20px; }
-        .btn-mic { background: #e74c3c; color: white; height: 50px; width: 50px; border-radius: 50%; font-size: 20px; }
-        .recording { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        :root {
+            --primary: #2c3e50;
+            --accent: #e74c3c;
+            --success: #27ae60;
+            --user-blue: #3498db;
+            --ai-gray: #ecf0f1;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 15px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user {
+            background: var(--user-blue);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .ai {
+            background: var(--ai-gray);
+            color: var(--primary);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        .controls {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .btn-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 20px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .btn-mic {
+            width: 60px;
+            height: 60px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            font-size: 1.6rem;
+            margin: 0 auto 15px auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .btn-mic.recording {
+            animation: pulse 1.5s infinite;
+            background: #c0392b;
+        }
+
+        .btn-send {
+            width: 45px;
+            height: 45px;
+            background: var(--success);
+            color: white;
+            border-radius: 50%;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+
+        #status {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <div class="app">
-        <div class="header">
-            <strong>AI Sponsor</strong><br>
-            <small>Appelez-moi une fois par jour</small>
-        </div>
-        <div id="chat"></div>
-        <div class="controls">
-            <div class="btn-row" style="justify-content: center;">
-                <button id="micBtn" class="btn-mic" onclick="toggleRecording()">🎤</button>
-            </div>
-            <div class="btn-row">
-                <input type="text" id="textInput" placeholder="Écrivez ou parlez..." onkeypress="if(event.key==='Enter') sendText()">
-                <button class="btn-send" onclick="sendText()">➤</button>
-            </div>
-        </div>
+
+<div class="app-container">
+    <div class="header">
+        <h2 style="margin:0">AI Sponsor</h2>
+        <small>Accompagnement Sobriété</small>
     </div>
 
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
+    <div id="chat-window">
+        <div class="bubble ai">Bonjour Carl. Je suis là pour t'écouter. Comment se passe ta sobriété aujourd'hui ?</div>
+    </div>
 
-        async function toggleRecording() {
-            const btn = document.getElementById('micBtn');
-            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+    <div class="controls">
+        <button id="micBtn" class="btn-mic" onclick="toggleRecording()">🎤</button>
+        <div class="btn-row">
+            <input type="text" id="textInput" placeholder="Écrire un message..." onkeypress="if(event.key==='Enter') sendText()">
+            <button class="btn-send" onclick="sendText()">➤</button>
+        </div>
+        <div id="status">En attente de ton partage...</div>
+    </div>
+</div>
+
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
+    const chatWindow = document.getElementById('chat-window');
+    const statusText = document.getElementById('status');
+    
+    // URL vers ton backend FastAPI
+    const API_URL = "http://127.0.0.1:8000";
+
+    async function toggleRecording() {
+        const btn = document.getElementById('micBtn');
+        
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+            try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = sendVoice;
                 audioChunks = [];
+
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = sendVoiceData;
+
                 mediaRecorder.start();
                 btn.classList.add('recording');
                 btn.innerText = "⏹";
-            } else {
-                mediaRecorder.stop();
-                btn.classList.remove('recording');
-                btn.innerText = "🎤";
+                statusText.innerText = "Je t'écoute attentivement...";
+            } catch (err) {
+                console.error("Microphone inaccessible:", err);
+                statusText.innerText = "Erreur micro (vérifiez les permissions).";
             }
+        } else {
+            mediaRecorder.stop();
+            btn.classList.remove('recording');
+            btn.innerText = "🎤";
+            statusText.innerText = "Je réfléchis à ce que tu m'as dit...";
         }
+    }
 
-        async function sendVoice() {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const formData = new FormData();
-            formData.append('file', blob);
+    async function sendVoiceData() {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', blob);
 
-            addMsg("Envoi de votre message vocal...", 'user');
-
-            const res = await fetch('http://localhost:8000/voice-chat', { method: 'POST', body: formData });
-            const data = await res.json();
-            
-            addMsg("Vous : " + data.transcript, 'user');
-            addMsg(data.response_text, 'ai');
-            
-            const audio = new Audio(`http://localhost:8000${data.audio_url}`);
-            audio.play();
-        }
-
-        async function sendText() {
-            const input = document.getElementById('textInput');
-            const val = input.value.trim();
-            if(!val) return;
-            addMsg(val, 'user');
-            input.value = '';
-
-            const res = await fetch('http://localhost:8000/chat', {
+        try {
+            const res = await fetch(`${API_URL}/voice-chat`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: val})
+                body: formData
             });
             const data = await res.json();
-            addMsg(data.response, 'ai');
-        }
 
-        function addMsg(text, role) {
-            const chat = document.getElementById('chat');
-            const div = document.createElement('div');
-            div.className = `msg ${role}`;
-            div.innerText = text;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
+            // Gestion de l'affichage (évite le undefined)
+            const userTxt = data.transcript || "Message vocal reçu";
+            const aiTxt = data.response || data.detail || JSON.stringify(data);
+
+            addMessage("Moi : " + userTxt, 'user');
+            addMessage(aiTxt, 'ai');
+
+            // Lecture audio si disponible
+            if (data.audio_url) {
+                const audio = new Audio(`${API_URL}${data.audio_url}`);
+                audio.play().catch(e => console.log("Lecture audio bloquée ou erreur:", e));
+            }
+            statusText.innerText = "Check-in terminé.";
+        } catch (err) {
+            console.error(err);
+            statusText.innerText = "Erreur de connexion au parrain.";
         }
-    </script>
+    }
+
+    async function sendText() {
+        const input = document.getElementById('textInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        addMessage(msg, 'user');
+        input.value = '';
+        statusText.innerText = "Réflexion...";
+
+        try {
+            const res = await fetch(`${API_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg })
+            });
+            const data = await res.json();
+            
+            // Gestion de l'affichage (évite le undefined)
+            const aiTxt = data.response || data.detail || JSON.stringify(data);
+            
+            addMessage(aiTxt, 'ai');
+            statusText.innerText = "Prêt.";
+        } catch (err) {
+            statusText.innerText = "Le serveur ne répond pas.";
+        }
+    }
+
+    function addMessage(text, role) {
+        const div = document.createElement('div');
+        div.className = `bubble ${role}`;
+        div.innerText = text;
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+</script>
+
 </body>
 </html>
