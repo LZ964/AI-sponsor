@@ -5,10 +5,9 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Charger les variables du fichier .env
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(title="AI Sponsor for 12 steps program")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,23 +16,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Récupération sécurisée de la clé
 api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    raise RuntimeError("La variable d'environnement OPENAI_API_KEY est manquante.")
-
 client = OpenAI(api_key=api_key)
 
 class ChatRequest(BaseModel):
     message: str
 
+@app.get("/")
+def home():
+    return {"project": "AI Sponsor for 12 steps program", "status": "active"}
+
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Clé API manquante.")
+    
     try:
         completion = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Tu es l'assistant de l'application HighGenic Cash."},
+                {
+                    "role": "system", 
+                    "content": (
+                        "Tu es un parrain (Sponsor) virtuel pour une personne suivant un programme en 12 étapes. "
+                        "Ton ton est bienveillant, encourageant, mais ferme sur les principes du rétablissement. "
+                        "Tu aides l'utilisateur final à réfléchir sur ses étapes et à maintenir sa sobriété au quotidien."
+                    )
+                },
                 {"role": "user", "content": request.message}
             ]
         )
