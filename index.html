@@ -3,64 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Sponsor - 12 Steps</title>
+    <title>AI Sponsor - Voix & Texte</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f7f9fc; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .app-container { width: 100%; max-width: 500px; height: 90vh; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .header { background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 15px 15px 0 0; }
-        #chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .bubble { padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; max-width: 85%; }
-        .user { background: #3498db; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .sponsor { background: #ecf0f1; color: #2c3e50; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .input-box { border-top: 1px solid #eee; padding: 15px; display: flex; gap: 10px; }
-        input { flex: 1; border: 1px solid #ddd; border-radius: 25px; padding: 12px 20px; outline: none; }
-        button { background: #27ae60; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #219150; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; display: flex; justify-content: center; padding: 20px; }
+        .app { width: 100%; max-width: 500px; background: white; border-radius: 20px; shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 90vh; }
+        .header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; }
+        .msg { margin-bottom: 15px; padding: 12px; border-radius: 10px; max-width: 80%; }
+        .user { background: #3498db; color: white; align-self: flex-end; margin-left: auto; }
+        .ai { background: #ecf0f1; color: #2c3e50; }
+        .controls { padding: 20px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 10px; }
+        .btn-row { display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { border: none; cursor: pointer; border-radius: 25px; transition: 0.3s; }
+        .btn-send { background: #27ae60; color: white; padding: 0 20px; }
+        .btn-mic { background: #e74c3c; color: white; height: 50px; width: 50px; border-radius: 50%; font-size: 20px; }
+        .recording { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <div class="app">
         <div class="header">
-            <h2 style="margin:0; font-size: 1.2rem;">AI Sponsor</h2>
-            <small>12 Steps Program Support</small>
+            <strong>AI Sponsor</strong><br>
+            <small>Appelez-moi une fois par jour</small>
         </div>
-        <div id="chat-window"></div>
-        <div class="input-box">
-            <input type="text" id="userInput" placeholder="Partagez ce que vous vivez..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">➤</button>
+        <div id="chat"></div>
+        <div class="controls">
+            <div class="btn-row" style="justify-content: center;">
+                <button id="micBtn" class="btn-mic" onclick="toggleRecording()">🎤</button>
+            </div>
+            <div class="btn-row">
+                <input type="text" id="textInput" placeholder="Écrivez ou parlez..." onkeypress="if(event.key==='Enter') sendText()">
+                <button class="btn-send" onclick="sendText()">➤</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const chatWindow = document.getElementById('chat-window');
-        
-        async function send() {
-            const input = document.getElementById('userInput');
-            const text = input.value.trim();
-            if(!text) return;
+        let mediaRecorder;
+        let audioChunks = [];
 
-            addBubble(text, 'user');
-            input.value = '';
-
-            try {
-                const res = await fetch('http://127.0.0.1:8000/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: text})
-                });
-                const data = await res.json();
-                addBubble(data.response, 'sponsor');
-            } catch (e) {
-                addBubble("Erreur: Impossible de joindre votre parrain IA.", 'sponsor');
+        async function toggleRecording() {
+            const btn = document.getElementById('micBtn');
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = sendVoice;
+                audioChunks = [];
+                mediaRecorder.start();
+                btn.classList.add('recording');
+                btn.innerText = "⏹";
+            } else {
+                mediaRecorder.stop();
+                btn.classList.remove('recording');
+                btn.innerText = "🎤";
             }
         }
 
-        function addBubble(text, role) {
+        async function sendVoice() {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', blob);
+
+            addMsg("Envoi de votre message vocal...", 'user');
+
+            const res = await fetch('http://localhost:8000/voice-chat', { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            addMsg("Vous : " + data.transcript, 'user');
+            addMsg(data.response_text, 'ai');
+            
+            const audio = new Audio(`http://localhost:8000${data.audio_url}`);
+            audio.play();
+        }
+
+        async function sendText() {
+            const input = document.getElementById('textInput');
+            const val = input.value.trim();
+            if(!val) return;
+            addMsg(val, 'user');
+            input.value = '';
+
+            const res = await fetch('http://localhost:8000/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: val})
+            });
+            const data = await res.json();
+            addMsg(data.response, 'ai');
+        }
+
+        function addMsg(text, role) {
+            const chat = document.getElementById('chat');
             const div = document.createElement('div');
-            div.className = `bubble ${role}`;
+            div.className = `msg ${role}`;
             div.innerText = text;
-            chatWindow.appendChild(div);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
         }
     </script>
 </body>
