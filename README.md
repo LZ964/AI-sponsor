@@ -1,7 +1,7 @@
 # AI-Sponsor 🤝
 **Un compagnon de rétablissement virtuel basé sur l'IA.**
 
-Ce projet est une application web légère conçue pour offrir un soutien empathique et structuré aux personnes en rétablissement de dépendances. Utilisant le modèle **Gemini 2.5 Flash**, l'IA adopte la personnalité d'un parrain virtuel imprégné de la philosophie des programmes en 12 étapes.
+Ce projet est une application web légère conçue pour offrir un soutien empathique et structuré aux personnes en rétablissement de dépendances.  l'IA adopte la personnalité d'un parrain virtuel imprégné de la philosophie des programmes en 12 étapes.
 
 ## ✨ Fonctionnalités
 *   **Interface Intuitive :** Design moderne et épuré avec Tailwind CSS.
