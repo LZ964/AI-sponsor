@@ -1,111 +1,128 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Parrain - v3.9</title>
+    <title>Mon Parrain - v6.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .chat-container { height: calc(100vh - 180px); scroll-behavior: smooth; }
-        .message-bubble { max-width: 85%; word-wrap: break-word; }
-        .sponsor-gradient { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        .chat-container { height: calc(100vh - 220px); }
+        .message { max-width: 85%; margin: 8px; padding: 12px; border-radius: 18px; line-height: 1.4; }
+        .user { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai { background: white; border: 1px solid #e2e8f0; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .err-msg { font-size: 10px; color: #ef4444; margin-top: 5px; font-family: monospace; background: #fee2e2; padding: 4px; border-radius: 4px; }
     </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
-    <header class="bg-white p-4 flex justify-between items-center border-b shadow-sm">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 sponsor-gradient rounded-full flex items-center justify-center text-white shadow-lg">
-                <i class="fas fa-hands-helping"></i>
-            </div>
-            <div>
-                <h1 class="font-semibold text-gray-800">Mon Parrain</h1>
-                <p id="status-label" class="text-xs text-green-500 font-medium">En ligne</p>
-            </div>
+<body class="bg-slate-50 flex flex-col h-screen overflow-hidden">
+    <header class="p-4 bg-white border-b shadow-sm">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <span class="font-bold text-indigo-600">Mon Parrain <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded ml-2">v6.1</span></span>
+            <div id="api-status" class="text-[10px] text-slate-400">Prêt</div>
         </div>
-        <button onclick="location.reload()" class="text-gray-400 hover:text-red-500"><i class="fas fa-redo-alt text-xl"></i></button>
     </header>
 
-    <main id="chat-box" class="chat-container overflow-y-auto p-4 space-y-4">
-        <div class="flex justify-start">
-            <div class="message-bubble bg-white border border-gray-100 shadow-sm p-4 rounded-2xl rounded-tl-none text-gray-700">
-                Salut Carl. Je suis prêt. Comment se passe ta journée ?
-            </div>
-        </div>
-    </main>
+```
+<div class="p-4 max-w-2xl mx-auto w-full">
+    <div id="key-section" class="bg-white p-3 rounded-xl border border-dashed border-indigo-200 flex gap-2">
+        <input type="password" id="key-input" class="flex-1 text-sm p-2 bg-slate-50 rounded-lg outline-none" placeholder="Clé API Gemini...">
+        <button id="save-btn" onclick="saveKey()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all">ACTIVER</button>
+    </div>
+</div>
 
-    <footer class="p-4 bg-white border-t">
-        <div class="max-w-4xl mx-auto relative flex items-center gap-2">
-            <textarea id="user-input" rows="1" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" placeholder="Écris ici..."></textarea>
-            <button onclick="handleSend()" class="w-12 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md hover:bg-indigo-700 transition-all">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </footer>
+<div id="chat-box" class="chat-container overflow-y-auto flex flex-col p-4 max-w-2xl mx-auto w-full">
+    <div class="message ai shadow-sm">Bonjour Carl. La clé est gérée sans popup pour plus de fluidité.</div>
+</div>
 
-    <script>
-        const apiKey = "AIzaSyBPd7ORtzCO2662BFBAntDR2gnYJSW54yQ"; 
-        const chatBox = document.getElementById('chat-box');
-        const userInput = document.getElementById('user-input');
-        
-        // Structure simplifiée au maximum pour éviter les erreurs de champ
-        let chatHistory = [
-            { 
-                role: "user", 
-                parts: [{ text: "Tu es mon parrain de rétablissement pour Carl. Réponds avec bienveillance selon les 12 étapes." }] 
-            },
-            { 
-                role: "model", 
-                parts: [{ text: "Je suis là pour toi Carl. Parlons-en." }] 
+<footer class="p-4 bg-white border-t mt-auto">
+    <div class="flex gap-2 max-w-2xl mx-auto">
+        <input id="user-input" type="text" class="flex-1 p-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="On continue ?">
+        <button id="send-btn" onclick="handleSend()" class="bg-indigo-600 text-white px-6 py-2 rounded-2xl font-semibold disabled:opacity-50">Envoi</button>
+    </div>
+</footer>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const keyInput = document.getElementById('key-input');
+    const sendBtn = document.getElementById('send-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const apiStatus = document.getElementById('api-status');
+
+    const MODEL = "gemini-1.5-flash";
+
+    let history = [
+        { role: "user", parts: [{ text: "Ton nom est Le Parrain. Tu es un mentor bienveillant pour Carl. Réponds brièvement." }] },
+        { role: "model", parts: [{ text: "Bien reçu." }] }
+    ];
+
+    const savedKey = localStorage.getItem('gemini_api_key_v61');
+    if (savedKey) keyInput.value = savedKey;
+
+    function saveKey() {
+        const val = keyInput.value.trim();
+        if(!val) return;
+        localStorage.setItem('gemini_api_key_v61', val);
+        saveBtn.innerText = "ENREGISTRÉ !";
+        saveBtn.classList.replace('bg-indigo-600', 'bg-green-600');
+        setTimeout(() => { location.reload(); }, 500);
+    }
+
+    async function handleSend() {
+        const text = userInput.value.trim();
+        const key = localStorage.getItem('gemini_api_key_v61');
+        if (!text || !key) return;
+
+        appendMsg('user', text);
+        userInput.value = '';
+        sendBtn.disabled = true;
+        apiStatus.innerText = "Transmission...";
+        history.push({ role: "user", parts: [{ text: text }] });
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${key}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: history })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.candidates) {
+                const reply = data.candidates[0].content.parts[0].text;
+                appendMsg('ai', reply);
+                history.push({ role: "model", parts: [{ text: reply }] });
+                apiStatus.innerText = "Stable";
+            } else {
+                const errorMsg = data.error ? data.error.message : "Erreur inconnue";
+                appendMsg('ai', "Le serveur est occupé ou la clé est invalide.");
+                const errDiv = document.createElement('div');
+                errDiv.className = "err-msg";
+                errDiv.innerText = `Détail : ${errorMsg}`;
+                chatBox.lastChild.appendChild(errDiv);
+                apiStatus.innerText = "Erreur";
+                history.pop();
             }
-        ];
-
-        async function handleSend() {
-            const text = userInput.value.trim();
-            if (!text) return;
-
-            appendMessage('user', text);
-            userInput.value = '';
-            chatHistory.push({ role: "user", parts: [{ text: text }] });
-
-            try {
-                // Utilisation de gemini-pro sur la v1 : c'est le combo le plus compatible au monde
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: chatHistory })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error ? data.error.message : "Erreur " + response.status);
-                }
-
-                const aiText = data.candidates[0].content.parts[0].text;
-                appendMessage('ai', aiText);
-                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
-
-            } catch (e) {
-                console.error("Erreur détectée :", e);
-                appendMessage('ai', `<span class="text-red-600 font-bold">Note :</span> Réessaie dans quelques secondes, la connexion s'est essoufflée.`);
-            }
+        } catch (e) {
+            appendMsg('ai', "Erreur réseau.");
+            apiStatus.innerText = "Échec";
         }
+        sendBtn.disabled = false;
+    }
 
-        function appendMessage(role, text) {
-            const wrapper = document.createElement('div');
-            wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-            const bubble = document.createElement('div');
-            bubble.className = `message-bubble p-4 rounded-2xl shadow-sm ${role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border text-gray-700 rounded-tl-none'}`;
-            bubble.innerHTML = text.replace(/\n/g, '<br>');
-            wrapper.appendChild(bubble);
-            chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-    </script>
+    function appendMsg(role, text) {
+        const div = document.createElement('div');
+        div.className = `message ${role} shadow-sm`;
+        div.innerText = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") handleSend(); });
+</script>
+```
+
 </body>
 </html>

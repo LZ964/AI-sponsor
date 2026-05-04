@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Parrain - v5.6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chat-container { height: calc(100vh - 220px); }
+        .message { max-width: 85%; margin: 8px; padding: 12px; border-radius: 18px; line-height: 1.4; }
+        .user { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai { background: white; border: 1px solid #e2e8f0; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .diagnostic { font-family: monospace; font-size: 10px; background: #0f172a; color: #10b981; padding: 10px; border-radius: 8px; margin-bottom: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body class="bg-slate-50 flex flex-col h-screen overflow-hidden">
+    <header class="p-4 bg-white border-b shadow-sm">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <span class="font-bold text-indigo-600">Mon Parrain <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded ml-2">Scanner v5.6</span></span>
+            <div id="status-badge" class="text-[10px] text-slate-400 italic">Prêt</div>
+        </div>
+    </header>
+
+    <div class="p-4 max-w-2xl mx-auto w-full">
+        <div id="diag-box" class="diagnostic hidden"></div>
+        <div id="key-section" class="bg-white p-3 rounded-xl border border-dashed border-indigo-200 flex gap-2">
+            <input type="password" id="key-input" class="flex-1 text-sm p-2 bg-slate-50 rounded-lg outline-none" placeholder="Colle ta clé API Gemini...">
+            <button onclick="saveKey()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">ACTIVER</button>
+        </div>
+    </div>
+    
+    <div id="chat-box" class="chat-container overflow-y-auto flex flex-col p-4 max-w-2xl mx-auto w-full">
+        <div class="message ai shadow-sm">Salut Carl. J'ai activé le scanner. Si Flash échoue, je chercherai un autre chemin.</div>
+    </div>
+
+    <footer class="p-4 bg-white border-t mt-auto">
+        <div class="flex gap-2 max-w-2xl mx-auto">
+            <input id="user-input" type="text" class="flex-1 p-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="On teste ?">
+            <button id="send-btn" onclick="handleSend()" class="bg-indigo-600 text-white px-6 py-2 rounded-2xl font-semibold disabled:opacity-50 transition-all">Envoi</button>
+        </div>
+    </footer>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const keyInput = document.getElementById('key-input');
+        const diagBox = document.getElementById('diag-box');
+        const sendBtn = document.getElementById('send-btn');
+        const statusBadge = document.getElementById('status-badge');
+
+        let history = [
+            { role: "user", parts: [{ text: "Ton nom est Le Parrain. Tu es un mentor bienveillant pour Carl. Réponds brièvement." }] },
+            { role: "model", parts: [{ text: "Bonjour Carl. Je suis là." }] }
+        ];
+
+        let discoveredModel = localStorage.getItem('discovered_model') || "gemini-1.5-flash";
+
+        const savedKey = localStorage.getItem('gemini_api_key_v56');
+        if (savedKey) keyInput.value = savedKey;
+
+        function saveKey() {
+            localStorage.setItem('gemini_api_key_v56', keyInput.value.trim());
+            location.reload();
+        }
+
+        function logDiag(msg) {
+            diagBox.classList.remove('hidden');
+            diagBox.innerText = `[DIAG] ${msg}`;
+        }
+
+        async function findModel(key) {
+            logDiag("Scan des modèles autorisés...");
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                const data = await res.json();
+                if (data.models) {
+                    const valid = data.models.find(m => m.supportedGenerationMethods.includes('generateContent'));
+                    if (valid) {
+                        const name = valid.name.split('/').pop();
+                        localStorage.setItem('discovered_model', name);
+                        return name;
+                    }
+                }
+                return null;
+            } catch (e) { return null; }
+        }
+
+        async function handleSend() {
+            const text = userInput.value.trim();
+            const key = localStorage.getItem('gemini_api_key_v56');
+            if (!text || !key) return;
+
+            appendMsg('user', text);
+            userInput.value = '';
+            sendBtn.disabled = true;
+            statusBadge.innerText = "Recherche...";
+            history.push({ role: "user", parts: [{ text: text }] });
+
+            let modelToUse = discoveredModel;
+            let response = await callAPI(modelToUse, key);
+
+            if (!response.ok) {
+                const newModel = await findModel(key);
+                if (newModel) {
+                    modelToUse = newModel;
+                    response = await callAPI(modelToUse, key);
+                }
+            }
+
+            if (response && response.ok) {
+                const data = await response.json();
+                const reply = data.candidates[0].content.parts[0].text;
+                appendMsg('ai', reply);
+                history.push({ role: "model", parts: [{ text: reply }] });
+                statusBadge.innerText = `Connecté (${modelToUse})`;
+            } else {
+                const errData = response ? await response.json() : {error:{message:"Serveur injoignable"}};
+                appendMsg('ai', `Erreur : ${errData.error.message}`);
+                logDiag(`Échec final. Vérifie ta clé sur Google AI Studio.`);
+                history.pop();
+            }
+            sendBtn.disabled = false;
+        }
+
+        async function callAPI(model, key) {
+            try {
+                return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: history })
+                });
+            } catch (e) { return { ok: false }; }
+        }
+
+        function appendMsg(role, text) {
+            const div = document.createElement('div');
+            div.className = `message ${role} shadow-sm`;
+            div.innerText = text;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") handleSend(); });
+    </script>
+</body>
+</html>
