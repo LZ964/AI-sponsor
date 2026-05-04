@@ -3,6 +3,7 @@ import uuid
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -11,6 +12,7 @@ load_dotenv()
 
 app = FastAPI(title="AI Sponsor for 12 steps program")
 
+# Autoriser les requêtes CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,18 +30,19 @@ if not os.path.exists(AUDIO_DIR):
 class ChatRequest(BaseModel):
     message: str
 
-# Prompt modifié pour forcer une intonation plus humaine via la ponctuation
 SYSTEM_PROMPT = (
     "Tu es un parrain (Sponsor) virtuel pour une personne suivant un programme en 12 étapes. "
-    "Ton ton doit être CHALEUREUX, VIVANT et EMPATHIQUE. "
-    "N'hésite pas à utiliser une ponctuation expressive (points d'exclamation, points de suspension...) "
-    "pour que la synthèse vocale ne soit pas monotone. "
-    "Fais des phrases courtes, comme dans une vraie conversation."
+    "Ton ton est empathique et calme. Tu encourages l'utilisateur à te raconter sa journée."
 )
+
+# --- ROUTES POUR LE FRONTEND SUR RENDER ---
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
+    # Envoie le fichier index.html à la racine du site
     return FileResponse("index.html")
+
+# --- ROUTES API ---
 
 @app.post("/chat")
 async def chat_text(request: ChatRequest):
@@ -74,13 +77,7 @@ async def chat_voice(file: UploadFile = File(...)):
 
         output_filename = f"{temp_id}_out.mp3"
         output_path = os.path.join(AUDIO_DIR, output_filename)
-        
-        # Changement vers la voix 'fable' pour plus de dynamisme
-        response_audio = client.audio.speech.create(
-            model="tts-1-hd", # Modèle HD pour une meilleure qualité
-            voice="fable",    # Voix plus expressive
-            input=text_output
-        )
+        response_audio = client.audio.speech.create(model="tts-1", voice="onyx", input=text_output)
         response_audio.stream_to_file(output_path)
 
         return {"transcript": transcript.text, "response": text_output, "audio_url": f"/audio/{output_filename}"}
