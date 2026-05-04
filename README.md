@@ -5,9 +5,9 @@ Ce projet est une application web légère conçue pour offrir un soutien empath
 
 ## ✨ Fonctionnalités
 *   **Interface Intuitive :** Design moderne et épuré avec Tailwind CSS.
-*   **Intelligence Artificielle :** Intégration de l'API Gemini pour des réponses contextuelles et bienveillantes.
+*   **Intelligence Artificielle :** Intégration de I'intelligence artificielle pour des réponses contextuelles et bienveillantes.
 *   **Philosophie "Un jour à la fois" :** Un système de discussion axé sur le moment présent et le partage d'expérience.
-*   **Outils Intégrés :** Bouton pour réinitialiser la discussion et export du projet en archive .zip.
+*   **Outils Intégrés :** Bouton pour réinitialiser la discussion
 
 ## 🚀 Installation Rapide
 
