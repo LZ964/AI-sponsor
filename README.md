@@ -13,7 +13,7 @@ Ce projet est une application web légère conçue pour offrir un soutien empath
 
 1. **Cloner le dépôt :**
    ```bash
-   git clone [https://github.com/LZ964/AI-sponsor.git](https://github.com/LZ964/AI-sponsor.git)
+   git clone https://github.com/LZ964/AI-sponsor.git
    cd AI-sponsor
 
 python3 -m http.server 8000

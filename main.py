@@ -3,6 +3,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# Charger les variables du fichier .env
+load_dotenv()
 
 app = FastAPI()
 
@@ -13,27 +17,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Remplacez par votre clé API réelle
-client = OpenAI(api_key="VOTRE_CLE_API_OPENAI")
+# Récupération sécurisée de la clé
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise RuntimeError("La variable d'environnement OPENAI_API_KEY est manquante.")
+
+client = OpenAI(api_key=api_key)
 
 class ChatRequest(BaseModel):
     message: str
 
-@app.get("/")
-def read_root():
-    return {"message": "AI Sponsor for 12 staps programs", "status": "prêt"}
-
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
-        response = client.chat.completions.create(
+        completion = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "AI Sponsor for 12 steps program"},
+                {"role": "system", "content": "Tu es l'assistant de l'application HighGenic Cash."},
                 {"role": "user", "content": request.message}
             ]
         )
-        return {"response": response.choices[0].message.content}
+        return {"response": completion.choices[0].message.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
