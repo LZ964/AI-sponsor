@@ -2,30 +2,120 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Sponsor</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .app { width: 100%; max-width: 400px; height: 90vh; background: white; border-radius: 15px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .header { background: #2c3e50; color: white; padding: 15px; text-align: center; border-radius: 15px 15px 0 0; }
-        #chat { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .bubble { padding: 10px; border-radius: 10px; font-size: 14px; max-width: 80%; word-wrap: break-word; }
-        .user { background: #3498db; color: white; align-self: flex-end; }
-        .ai { background: #ecf0f1; color: #2c3e50; align-self: flex-start; }
-        .footer { padding: 15px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 10px; }
-        .row { display: flex; gap: 10px; }
-        input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
-        button { border: none; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; }
-        .btn-mic { background: #e74c3c; color: white; margin: 0 auto; width: 50px; height: 50px; font-size: 20px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f4f7f6; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .app { 
+            width: 100%; 
+            max-width: 450px; 
+            height: 90vh; 
+            background: white; 
+            border-radius: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 15px; 
+            text-align: center; 
+            border-radius: 15px 15px 0 0; 
+            font-weight: bold;
+        }
+        #chat { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+        }
+        .bubble { 
+            padding: 12px; 
+            border-radius: 12px; 
+            font-size: 15px; 
+            max-width: 85%; 
+            word-wrap: break-word; 
+            line-height: 1.4; 
+        }
+        .user { 
+            background: #3498db; 
+            color: white; 
+            align-self: flex-end; 
+            border-bottom-right-radius: 2px; 
+        }
+        .ai { 
+            background: #ecf0f1; 
+            color: #2c3e50; 
+            align-self: flex-start; 
+            border-bottom-left-radius: 2px; 
+        }
+        .footer { 
+            padding: 15px; 
+            border-top: 1px solid #eee; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+        }
+        .row { 
+            display: flex; 
+            gap: 10px; 
+        }
+        input { 
+            flex: 1; 
+            padding: 12px; 
+            border-radius: 20px; 
+            border: 1px solid #ddd; 
+            outline: none; 
+        }
+        button { 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 50%; 
+            width: 45px; 
+            height: 45px; 
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+        .btn-mic { 
+            background: #e74c3c; 
+            color: white; 
+            margin: 0 auto; 
+            width: 55px; 
+            height: 55px; 
+            font-size: 22px; 
+        }
+        .active { 
+            animation: pulse 1.2s infinite; 
+            background: #c0392b; 
+        }
+        @keyframes pulse { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(1.1); } 
+            100% { transform: scale(1); } 
+        }
     </style>
 </head>
 <body>
 <div class="app">
-    <div class="header"><strong>AI Sponsor</strong></div>
-    <div id="chat"></div>
+    <div class="header">AI Sponsor</div>
+    <div id="chat">
+        <div class="bubble ai">Bonjour Carl. Je suis là pour t'écouter. Comment te sens-tu aujourd'hui ?</div>
+    </div>
     <div class="footer">
         <button id="micBtn" class="btn-mic" onclick="toggleRecording()">🎤</button>
         <div class="row">
-            <input type="text" id="textInput" placeholder="Écrire..." onkeypress="if(event.key==='Enter') sendText()">
+            <input type="text" id="textInput" placeholder="Écrire un message..." onkeypress="if(event.key==='Enter') sendText()">
             <button style="background: #27ae60; color: white;" onclick="sendText()">➤</button>
         </div>
     </div>
@@ -34,8 +124,9 @@
 <script>
     let mediaRecorder;
     let audioChunks = [];
-    // Sur Render, l'API est sur le même domaine, on laisse vide
-    const API_URL = ""; 
+    
+    // CRITIQUE : Utilise window.location.origin pour que ça marche aussi bien en local que sur Render
+    const API_URL = window.location.origin; 
 
     async function toggleRecording() {
         const btn = document.getElementById('micBtn');
@@ -48,10 +139,14 @@
                 mediaRecorder.onstop = sendVoice;
                 mediaRecorder.start();
                 btn.innerText = "⏹";
-            } catch (err) { alert("Microphone non autorisé"); }
+                btn.classList.add('active');
+            } catch (err) { 
+                alert("Impossible d'accéder au microphone. Vérifie les permissions de ton navigateur."); 
+            }
         } else {
             mediaRecorder.stop();
             btn.innerText = "🎤";
+            btn.classList.remove('active');
         }
     }
 
@@ -59,34 +154,55 @@
         const blob = new Blob(audioChunks, { type: 'audio/webm' });
         const formData = new FormData();
         formData.append('file', blob);
-        const res = await fetch(`${API_URL}/voice-chat`, { method: 'POST', body: formData });
-        const data = await res.json();
-        addMsg("Moi : " + (data.transcript || "Audio"), 'user');
-        addMsg(data.response, 'ai');
-        if (data.audio_url) new Audio(API_URL + data.audio_url).play();
+        
+        try {
+            const res = await fetch(`${API_URL}/voice-chat`, { method: 'POST', body: formData });
+            if (!res.ok) throw new Error("Erreur serveur");
+            
+            const data = await res.json();
+            if (data.transcript) addMsg("Moi : " + data.transcript, 'user');
+            if (data.response) addMsg(data.response, 'ai');
+            if (data.audio_url) {
+                const audio = new Audio(API_URL + data.audio_url);
+                audio.play();
+            }
+        } catch (e) { 
+            console.error(e);
+            addMsg("Désolé, j'ai eu un problème pour traiter l'audio.", 'ai'); 
+        }
     }
 
     async function sendText() {
         const input = document.getElementById('textInput');
-        const msg = input.value;
+        const msg = input.value.trim();
         if (!msg) return;
+        
         addMsg(msg, 'user');
         input.value = '';
-        const res = await fetch(`${API_URL}/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: msg })
-        });
-        const data = await res.json();
-        addMsg(data.response, 'ai');
+
+        try {
+            const res = await fetch(`${API_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg })
+            });
+            if (!res.ok) throw new Error("Erreur serveur");
+            
+            const data = await res.json();
+            addMsg(data.response, 'ai');
+        } catch (e) { 
+            console.error(e);
+            addMsg("Le serveur ne répond pas. Réessaie plus tard.", 'ai'); 
+        }
     }
 
     function addMsg(txt, role) {
         const div = document.createElement('div');
         div.className = `bubble ${role}`;
         div.innerText = txt;
-        document.getElementById('chat').appendChild(div);
-        document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+        const chat = document.getElementById('chat');
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
     }
 </script>
 </body>
