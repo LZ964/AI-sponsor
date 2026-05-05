@@ -8,12 +8,12 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement (.env en local, variables Render en prod)
+# Charger les variables d'environnement
 load_dotenv()
 
 app = FastAPI()
 
-# Configuration CORS pour permettre au navigateur de communiquer avec l'API
+# Configuration CORS indispensable pour Render
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,11 +22,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialisation du client OpenAI
+# Initialisation OpenAI
 api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key)
 
-# Dossier temporaire pour l'audio (Render utilise /tmp pour l'écriture)
+# Dossier temporaire compatible avec l'environnement Render
 AUDIO_DIR = "/tmp/audio_responses"
 if not os.path.exists(AUDIO_DIR):
     os.makedirs(AUDIO_DIR)
@@ -55,8 +55,8 @@ async def chat_text(request: ChatRequest):
         )
         return {"response": completion.choices[0].message.content}
     except Exception as e:
-        print(f"Erreur Chat: {e}")
-        return {"response": "Désolé, je rencontre une petite difficulté technique."}
+        print(f"Erreur API Chat: {e}")
+        return {"response": "Je rencontre une petite difficulté technique, réessaie plus tard."}
 
 @app.post("/voice-chat")
 async def chat_voice(file: UploadFile = File(...)):
@@ -64,16 +64,16 @@ async def chat_voice(file: UploadFile = File(...)):
         temp_id = str(uuid.uuid4())
         input_path = os.path.join(AUDIO_DIR, f"{temp_id}.webm")
         
-        # Sauvegarde du fichier audio reçu
+        # Lecture et sauvegarde du vocal
         contents = await file.read()
         with open(input_path, "wb") as f:
             f.write(contents)
 
-        # Transcription avec Whisper
+        # Transcription Whisper
         with open(input_path, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
         
-        # Réponse texte de l'IA
+        # Réponse GPT
         completion = client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -82,7 +82,7 @@ async def chat_voice(file: UploadFile = File(...)):
             ]
         )
         
-        # Synthèse vocale (TTS)
+        # Génération TTS (Vocal de l'IA)
         output_filename = f"{temp_id}.mp3"
         output_path = os.path.join(AUDIO_DIR, output_filename)
         response_audio = client.audio.speech.create(
@@ -93,12 +93,12 @@ async def chat_voice(file: UploadFile = File(...)):
         response_audio.stream_to_file(output_path)
 
         return {
-            "transcript": transcript.text,
-            "response": completion.choices[0].message.content,
+            "transcript": transcript.text, 
+            "response": completion.choices[0].message.content, 
             "audio_url": f"/audio/{output_filename}"
         }
     except Exception as e:
-        print(f"Erreur Voice: {e}")
+        print(f"Erreur API Voice: {e}")
         return {"transcript": "Erreur", "response": str(e), "audio_url": None}
 
 @app.get("/audio/{filename}")
@@ -106,7 +106,8 @@ async def get_audio(filename: str):
     return FileResponse(os.path.join(AUDIO_DIR, filename))
 
 if __name__ == "__main__":
-    # Récupération du port dynamique de Render
+    # Render détecte automatiquement le port 10000
     port = int(os.environ.get("PORT", 10000))
-    print(f"Démarrage sur le port {port}")
+    print(f"Clé API détectée (début) : {api_key[:5] if api_key else 'ABSENTE'}")
+    print(f"Démarrage du serveur sur le port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
