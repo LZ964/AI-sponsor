@@ -2,5 +2,4 @@ fastapi
 uvicorn
 openai
 python-dotenv
-python-multipart
-python-dotenv
+python-multipartss
