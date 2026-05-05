@@ -1,113 +1,41 @@
 import os
-import uuid
-import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel
-from openai import OpenAI
+from fastapi import FastAPI, Request, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
+import uvicorn
 
-# Charger les variables d'environnement
+# Chargement des variables d'environnement (.env)
 load_dotenv()
 
-app = FastAPI()
-
-# Configuration CORS indispensable pour Render
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="IA Sponsor for 12 steps programs",
+    description="Assistant de soutien basé sur les programmes en 12 étapes"
 )
 
-# Initialisation OpenAI
-api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=api_key)
-
-# Dossier temporaire compatible avec l'environnement Render
-AUDIO_DIR = "/tmp/audio_responses"
-if not os.path.exists(AUDIO_DIR):
-    os.makedirs(AUDIO_DIR)
-
-class ChatRequest(BaseModel):
-    message: str
-
-SYSTEM_PROMPT = "Tu es un parrain bienveillant. Sois chaleureux et encourageant."
+# Configuration pour servir les fichiers statiques et templates
+# Assure-toi d'avoir un dossier 'static' et 'templates' si tu sépares les fichiers
+templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    index_path = os.path.join(os.getcwd(), "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return HTMLResponse(content="<h1>Erreur : index.html non trouvé</h1>", status_code=404)
+async def get_index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/chat")
-async def chat_text(request: ChatRequest):
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": request.message}
-            ]
-        )
-        return {"response": completion.choices[0].message.content}
-    except Exception as e:
-        print(f"Erreur API Chat: {e}")
-        return {"response": "Je rencontre une petite difficulté technique, réessaie plus tard."}
+async def chat_endpoint(message: str = Form(...)):
+    # Ici, tu insères ta logique OpenAI/Gemini
+    # Pour l'exemple, on renvoie une réponse simple
+    reply = f"En tant que sponsor, je t'écoute. Tu as dit : {message}"
+    return JSONResponse(content={"reply": reply})
 
 @app.post("/voice-chat")
-async def chat_voice(file: UploadFile = File(...)):
-    try:
-        temp_id = str(uuid.uuid4())
-        input_path = os.path.join(AUDIO_DIR, f"{temp_id}.webm")
-        
-        # Lecture et sauvegarde du vocal
-        contents = await file.read()
-        with open(input_path, "wb") as f:
-            f.write(contents)
-
-        # Transcription Whisper
-        with open(input_path, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-        
-        # Réponse GPT
-        completion = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": transcript.text}
-            ]
-        )
-        
-        # Génération TTS (Vocal de l'IA)
-        output_filename = f"{temp_id}.mp3"
-        output_path = os.path.join(AUDIO_DIR, output_filename)
-        response_audio = client.audio.speech.create(
-            model="tts-1-hd",
-            voice="fable",
-            input=completion.choices[0].message.content
-        )
-        response_audio.stream_to_file(output_path)
-
-        return {
-            "transcript": transcript.text, 
-            "response": completion.choices[0].message.content, 
-            "audio_url": f"/audio/{output_filename}"
-        }
-    except Exception as e:
-        print(f"Erreur API Voice: {e}")
-        return {"transcript": "Erreur", "response": str(e), "audio_url": None}
-
-@app.get("/audio/{filename}")
-async def get_audio(filename: str):
-    return FileResponse(os.path.join(AUDIO_DIR, filename))
+async def voice_chat_endpoint(file: UploadFile = File(...)):
+    # Cette route nécessite absolument 'python-multipart'
+    return JSONResponse(content={"message": "Fichier audio reçu avec succès"})
 
 if __name__ == "__main__":
-    # Render détecte automatiquement le port 10000
+    # Render utilise la variable d'environnement PORT (souvent 10000)
     port = int(os.environ.get("PORT", 10000))
-    print(f"Clé API détectée (début) : {api_key[:5] if api_key else 'ABSENTE'}")
-    print(f"Démarrage du serveur sur le port {port}")
+    print(f"Démarrage de l'IA Sponsor sur le port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
