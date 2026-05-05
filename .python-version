@@ -1,2 +1,1 @@
-# Dans ton terminal, à la racine du projet :
-echo "3.12.1" > .python-version
+3.12.1

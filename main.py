@@ -1,27 +1,32 @@
 import os
-from fastapi import FastAPI, Request, Form, UploadFile, File
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from openai import OpenAI
 from dotenv import load_dotenv
 import uvicorn
 
 # Chargement des variables d'environnement
 load_dotenv()
 
-app = FastAPI(
-    title="IA Sponsor for 12 steps programs",
-    description="Assistant de soutien basé sur les programmes en 12 étapes"
-)
+# Initialisation du client OpenAI
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# Configuration du moteur de templates (cherche dans le dossier /templates)
+app = FastAPI(title="IA Sponsor for 12 steps programs")
+
+# Configuration du moteur de templates
 templates = Jinja2Templates(directory="templates")
+
+# Instructions de rôle pour l'IA
+SYSTEM_PROMPT = (
+    "Tu es un sponsor bienveillant pour une personne suivant un programme en 12 étapes. "
+    "Ton ton est encourageant, honnête et respectueux. Tu connais bien les traditions et les étapes. "
+    "Tu dois offrir du soutien, partager de l'espoir et rester focalisé sur le rétablissement."
+)
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index(request: Request):
-    """
-    Affiche l'interface utilisateur. 
-    L'appel est explicite pour éviter les erreurs de type 'tuple' sur certaines versions de Python.
-    """
+    """Affiche l'interface utilisateur (index.html dans le dossier templates)"""
     return templates.TemplateResponse(
         request=request,
         name="index.html"
@@ -29,22 +34,24 @@ async def get_index(request: Request):
 
 @app.post("/chat")
 async def chat_endpoint(message: str = Form(...)):
-    """
-    Endpoint pour la messagerie texte.
-    """
-    # Ici, tu pourras intégrer ton appel API OpenAI ou Gemini
-    reply = f"Merci pour ton partage. En tant que sponsor, je t'écoute. Tu as dit : {message}"
+    """Envoie le message à OpenAI et retourne la réponse du sponsor"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": message}
+            ],
+            max_tokens=500
+        )
+        reply = response.choices[0].message.content
+    except Exception as e:
+        reply = "Je suis désolé, j'ai une petite difficulté technique pour me connecter. Respire un grand coup, je reviens vite."
+        print(f"Erreur OpenAI: {e}")
+
     return JSONResponse(content={"reply": reply})
 
-@app.post("/voice-chat")
-async def voice_chat_endpoint(file: UploadFile = File(...)):
-    """
-    Endpoint pour les messages vocaux (nécessite python-multipart).
-    """
-    return JSONResponse(content={"message": "Fichier audio reçu avec succès"})
-
 if __name__ == "__main__":
-    # Render utilise la variable d'environnement PORT, par défaut 10000
+    # Port dynamique pour Render
     port = int(os.environ.get("PORT", 10000))
-    print(f"Démarrage de l'IA Sponsor sur le port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
